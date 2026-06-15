@@ -141,10 +141,10 @@ The end goal is to replace the Elegoo V4 / Arduino brain with:
 
 When this happens:
 - Mode 1 stays largely the same (phone already sends ball packets over USB serial — same format)
-- Mode 2 will switch from odometry-based to AprilTag visual navigation (no more dead-reckoning)
-- The simulation folder will become less relevant once visual navigation is in place
+- Mode 2 **keeps odometry as the primary return-path method** — this is the core upgrade over Mark 4 and is a permanent design decision, not a stepping stone
+- The simulation folder stays fully relevant — it directly models the odometry return path
 
-The Mark 4 Ping Pong project (`cklaw25/unibots-mark2-uncomplete` was previously this, now it will be a separate repo) already has the Android + ESP32 implementation.
+The odometry dead-reckoning is what Mark 4 Ping Pong lacked. It is the main reason UnibotsMarkII exists as a separate project. Do not replace it with AprilTag visual navigation.
 
 ---
 

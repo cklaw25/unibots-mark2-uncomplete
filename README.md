@@ -201,6 +201,6 @@ The current brain is the Elegoo V4 running Arduino code. The plan is to eventual
 - **Android phone** as the vision/brain (YOLO11 ball detection, AprilTag navigation)
 - **ESP32** as the motor controller
 
-This is already implemented in a separate project (Mark 4 Ping Pong). When the migration happens, the Mode 2 return path will switch from odometry-based to AprilTag visual navigation.
-
 The serial packet format (ball detection CSV from Android) is already compatible between the two projects.
+
+**Mode 2 keeps odometry as the primary return-path method.** The odometry dead-reckoning is the core upgrade over Mark 4 Ping Pong and is a permanent design decision — it will not be replaced by AprilTag visual navigation. The simulation folder directly models this and stays fully relevant.
