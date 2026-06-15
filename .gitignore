@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+simulation/env/
+simulation/venv/
+simulation/*.png
+
+# Arduino build outputs
+arduino/**/.arduino15/
+arduino/**/build/
+
+# PlatformIO
+esp32/**/.pio/
+esp32/**/build/
