@@ -1,9 +1,34 @@
 # Session Conversation Log & Project Handoff
-Last saved: 2026-06-15
+Last saved: 2026-06-15 (updated same day — git/repo setup session)
 
 This file is a human-readable summary of the full development session so far.
 It is intended to allow someone picking this up on a new machine to understand
 exactly where we left off, what decisions were made and why, and what to do next.
+
+---
+
+## Session 2 — 2026-06-15 (Git setup + clarification session)
+
+### What happened
+- Confirmed UnibotsMarkII (`C:\unibotsmark2\`) is the **one and only active project** going forward
+- Mark 4 Ping Pong (`C:\mark 4 ping pong\android_dylan_rough\`) is reference only — do not write to it
+- Created a clean GitHub repo: `cklaw25/unibots-mark2-uncomplete`
+- Pushed all UnibotsMarkII code (arduino, esp32, simulation, pc_test, rulebook screenshots)
+- Wrote new README.md and this CONVERSATION_LOG.md
+- **Key correction:** odometry is the permanent Mode 2 return path. It will NOT be replaced by AprilTag visual navigation when migrating to Android+ESP32. Odometry is the core upgrade over Mark 4.
+
+### Project folder structure confirmed
+| Path | Purpose |
+|------|---------|
+| `C:\unibotsmark2\` | Main active project (this repo) |
+| `C:\unibotsmark2_backup_2026-06-13\` | Backup — do not edit |
+| `C:\mark 4 ping pong\android_dylan_rough\` | Old project — reference only |
+| `C:\esp32\` | Old ESP32 firmware — reference only |
+
+### State at close of session
+- Everything committed and pushed to `cklaw25/unibots-mark2-uncomplete`
+- No code changes made — this was purely a git/docs session
+- Next session: provide pin numbers and start hardware testing (see "What to do next" section below)
 
 ---
 
