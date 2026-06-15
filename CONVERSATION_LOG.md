@@ -7,6 +7,19 @@ exactly where we left off, what decisions were made and why, and what to do next
 
 ---
 
+## Session 3 — 2026-06-15 (Quick test run)
+
+### What happened
+- Ran the Python simulation (`simulation/robot_sim.py`) — completed successfully, 9mm error on return to start, pure dead-reckoning, no tag correction needed
+- Ran the PC vision test (`pc_test/vision_test.py`) — loaded YOLOv8 model + camera (1280×720) successfully. Target classes: 32=sports ball, 47=apple, 49=orange. Run it directly in terminal (not background) so the window stays open: `cd C:\unibotsmark2\pc_test && python vision_test.py`
+- No code changes this session
+
+### State at close
+- Everything is working as expected
+- Next step: provide hardware pin numbers → fill in `UnibotsMain.ino` → flash to Elegoo V4 → test on real robot
+
+---
+
 ## Session 2 — 2026-06-15 (Git setup + clarification session)
 
 ### What happened
