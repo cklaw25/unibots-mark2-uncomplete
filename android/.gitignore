@@ -1,0 +1,11 @@
+# Android build outputs
+.gradle/
+.idea/
+build/
+app/build/
+app/.cxx/
+local.properties
+
+# Large binary dependencies (download separately - see README)
+app/src/main/jni/ncnn-20260113-android-vulkan/
+app/src/main/jni/opencv-mobile-4.13.0-android/

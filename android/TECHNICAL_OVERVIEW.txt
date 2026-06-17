@@ -1,0 +1,173 @@
+MARK 4 PING PONG ROBOT — TECHNICAL OVERVIEW
+============================================
+Last updated: 2026-06-15
+
+COMPETITION CONTEXT
+-------------------
+Unibots UK 2025-2026. 2000x2000mm arena, white floor, black walls 150mm tall.
+Match duration: 180 seconds. Balls: 16 orange ping-pong balls (40mm), 24 magnetic
+steel ball bearings (20mm). Robot must start in a 200mm cube, can extend to 300mm.
+Fully autonomous — no remote control.
+
+Scoring:
+  4 pts per ping-pong ball in own net
+  2 pts per bearing in net
+  1 pt per bearing held by robot
+  3 pts for parking at scoring wall
+
+Navigation aids: AprilTags on walls (36h11 family, IDs 0–23). Tags are mounted on
+the 4 walls, covering all compass directions.
+
+
+SYSTEM ARCHITECTURE
+-------------------
+
+  [Android Phone]
+       |
+       | USB OTG cable (primary, 115200 baud)
+       | WiFi UDP fallback (ESP32 AP: PingPong_ESP32 / 12345678, port 4210)
+       v
+  [ESP32-WROOM-32]
+       |
+       +---> L298N #1 (Back Left + Front Left motors)
+       +---> L298N #2 (Back Right + Front Right motors)
+       +---> L298N #3 (Lift UP / Lift DOWN)
+       +---> Spinner motor (IN3/IN4)
+
+The Android phone is the "brain" for perception:
+  - YOLO11 via ncnn detects the ping-pong ball (Part 1, Task 5)
+  - AprilTag C library detects wall tags (Part 2, Task 6)
+
+The ESP32 is the motor controller and receives commands from the phone.
+
+
+OPERATION MODES
+---------------
+
+PART 1 — Ball Tracking (Task 5, ~90 seconds)
+  Phone uses front camera + YOLO11 to detect the ball.
+  Ball data is sent every frame to ESP32 as a CSV packet.
+  ESP32 runs a step-scan FSM:
+    STATE_STEP_ROTATE  → rotate CW for ~400ms (~45 degrees)
+    STATE_SCAN_PAUSE   → stop for 1500ms, look for ball
+                         ball centred → flash LED x3, drive forward → STATE_MOVING_FORWARD
+                         ball off-centre → short align pulse → STATE_ALIGN_ROTATE
+                         timeout → STATE_STEP_ROTATE (next 45-degree step)
+    STATE_ALIGN_ROTATE → 200ms rotation toward ball → STATE_SCAN_PAUSE
+    STATE_MOVING_FORWARD → drive forward until ball leaves centre
+    STATE_COASTING     → coast 2500ms, then fire spinner sequence → STATE_STEP_ROTATE
+
+  Spinner sequence (fires after each coast):
+    CW 300ms → stop → wait 300ms → CCW 300ms → stop
+    (Spinner is the ball-launching mechanism)
+
+PART 2 — AprilTag Navigation (Task 6, ~90 seconds)
+  Phone uses BACK camera + AprilTag library to detect wall tags.
+  Phone runs a full 11-state FSM and sends CMD packets to ESP32.
+
+  States:
+    P2_SCAN         → rotate CW in 45-degree steps (~400ms each), 1500ms pause between steps
+    P2_SCAN_PAUSE   → look for any tag; found → P2_ALIGN; timeout → P2_SCAN
+    P2_ALIGN        → rotate until tag centre within ±40px of screen centre
+    P2_APPROACH     → drive forward toward tag
+                      non-target tag: stop at 150px side length → P2_FIND_NEXT
+                      target tag (ID 1): stop at 70px side length → P2_TURN_180
+    P2_FIND_NEXT    → rotate shortest path toward Tag 1; timeout 10s → P2_SCAN
+    P2_TURN_180     → rotate CW for 1500ms
+    P2_REVERSE      → drive backward 2s
+    P2_LIFT_UP      → raise lift 3s
+    P2_LIFT_DOWN    → lower lift 1s
+    P2_FORWARD_EXIT → drive forward 2s → delivery complete → switch back to Part 1
+    P2_DONE         → Java switches to Task 5 immediately
+
+AUTO-CYCLE
+  Part 1 runs 90s → auto-switch to Part 2
+  Part 2 runs 90s → auto-switch back to Part 1 (or immediately on delivery)
+  Cycle repeats indefinitely
+
+
+PACKET FORMATS
+--------------
+
+Ball packet (Part 1, Phone → ESP32):
+  frame_seq, timestamp_ms, frame_w, frame_h, num_targets, has_primary,
+  bx, by, bw, bh, prob, is_centered, err_x, err_y [, ...more objects]\n
+
+Command packet (Part 2, Phone → ESP32):
+  CMD,<command>\n
+  Commands: STOP, ROTATE_CW, ROTATE_CCW, FORWARD, BACKWARD, LIFT_UP, LIFT_DOWN
+
+ESP32 distinguishes the two by checking for "CMD," prefix.
+
+
+MOTOR PIN MAPPING
+-----------------
+
+GPIO | L298N   | Motor
+-----|---------|---------------------------
+ 26  | #1 IN1  | Back Left
+ 25  | #1 IN2  | Back Left
+ 33  | #1 IN3  | Front Left
+ 32  | #1 IN4  | Front Left
+ 14  | #2 IN1  | Back Right
+ 27  | #2 IN2  | Back Right
+ 23  | #2 IN3  | Front Right
+ 22  | #2 IN4  | Front Right
+ 19  | #3 IN1  | Lift UP
+ 18  | #3 IN2  | Lift DOWN
+ 15  | IN3     | Spinner
+ 21  | IN4     | Spinner
+
+Power: Two battery packs in series (~24V), LM2596 buck converter → ESP32 VIN
+
+
+ROTATION DIRECTION — CRITICAL NOTE
+-----------------------------------
+set_rotate()    = CLOCKWISE physically    (left motors forward, right backward)
+set_rotate_ccw() = COUNTER-CLOCKWISE physically
+
+Alignment logic is INVERTED from naive expectation:
+  err_x > 0 (object to the RIGHT of screen) → send ROTATE_CCW
+  err_x < 0 (object to the LEFT of screen)  → send ROTATE_CW
+This was verified physically and is correct. Do not "fix" this.
+
+
+DO NOT / KNOWN GOTCHAS
+-----------------------
+- Do NOT use LEDC PWM for motor control — it broke rotation. Use digitalWrite + software duty cycle.
+- move_forward() passes `false` for all motor directions (wired in reverse physically).
+- Do NOT downscale/resize the frame in draw_apriltag_mode() — corrupts the display.
+- Do NOT use LEDC or analogWrite for spinner — same issue.
+- Camera must be manually switched: FRONT for Part 1 (ball), BACK for Part 2 (AprilTags).
+
+
+TUNABLE CONSTANTS
+-----------------
+In yolo11ncnn.cpp (Android / Part 2 FSM):
+  TARGET_TAG      = 1          (which AprilTag ID is the scoring net)
+  NUM_TAGS        = 24
+  ALIGN_THRESH    = 40 px
+  CLOSE_ENOUGH    = 150.0f px  (stop approach for non-target tags)
+  TARGET_RANGE_PX = 70.0f px   (trigger delivery for target tag)
+  TURN_180_MS     = 1500.0 ms  (tune for actual 180 degree rotation)
+  PHASE_SECS      = 90.0       (seconds per phase)
+  SCAN_STEP_MS    = 400.0 ms   (~45 degree rotation per step)
+  SCAN_PAUSE_MS   = 1500.0 ms  (pause to look for tags)
+
+In main.cpp (ESP32 / Part 1 FSM):
+  ROTATE_STEP_MS  = 400        (tune for actual ~45 degrees)
+  SCAN_PAUSE_MS   = 1500
+  ALIGN_STEP_MS   = 200        (per alignment pulse)
+  SPINNER_DEG120_MS = 300      (tune for actual 120 degree spinner rotation)
+
+
+KEY FILES
+---------
+  app/src/main/jni/yolo11ncnn.cpp   — core C++ logic, ball detection + AprilTag FSM
+  app/src/main/java/.../MainActivity.java — Java UI, USB serial, auto-cycle timers
+  app/src/main/jni/ndkcamera.cpp    — camera capture (1280x720 for all tasks)
+  esp32_main.cpp                    — ESP32 firmware (flash with PlatformIO)
+
+ESP32 firmware lives in this repo as esp32_main.cpp.
+The PlatformIO project that is actually flashed lives at C:\esp32\src\main.cpp
+(copy esp32_main.cpp there before flashing).

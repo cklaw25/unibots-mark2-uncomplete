@@ -6,10 +6,17 @@ simulation/env/
 simulation/venv/
 simulation/*.png
 
-# Arduino build outputs
+# Arduino / PlatformIO build outputs
 arduino/**/.arduino15/
 arduino/**/build/
-
-# PlatformIO
+arduino/**/.pio/
 esp32/**/.pio/
 esp32/**/build/
+
+# Android build artifacts
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/**/*.iml
+android/.idea/

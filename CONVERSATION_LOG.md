@@ -1,9 +1,126 @@
 # Session Conversation Log & Project Handoff
-Last saved: 2026-06-15 (updated same day — git/repo setup session)
+Last saved: 2026-06-17 (updated — UnibotsMainV2 generated)
 
 This file is a human-readable summary of the full development session so far.
 It is intended to allow someone picking this up on a new machine to understand
 exactly where we left off, what decisions were made and why, and what to do next.
+
+---
+
+## Session 7 — 2026-06-17 (UnibotsMainV2 generated)
+
+### What happened
+- Clarified that "broken 2-motor scheme" referred to the CODE structure in UnibotsMain.ino (only 2 PIN defines for left/right groups), NOT the hardware — all 4 wheels were already confirmed working
+- Clarified TT4 TX/RX conflict: TT4's direction pins on GPIO1(TX)/GPIO3(RX) block Android serial packets whenever TT4 is driven — nothing to do with N20
+- **Hardware fix decided:** re-wire TT4 IN1/IN2 from GPIO1/GPIO3 → GPIO18/GPIO19 (2-wire re-route, frees UART0 fully)
+- Confirmed N20 spinner activation timeline: turns ON at end of ALIGN (ball centred), stays ON through APPROACH and COAST, turns OFF when COAST ends. Never on during Mode 2.
+- Stepper motor type/pins TBD — stubs left in code
+- Generated `arduino/UnibotsMainV2/UnibotsMainV2.ino` — full combined firmware
+
+### Key code changes vs UnibotsMain.ino
+- Replaced 2-motor PIN scheme with 4-motor `MotorPins` struct (from HardwareTest), invert flags included
+- TT4 IN1/IN2 now GPIO18/GPIO19 (re-wired)
+- Fixed APPROACH and COAST heading-hold bug: original code had `normalizeAngle(heading_deg - heading_deg)` (always 0) — fixed by capturing `approachHeading` / `coastHeading` on state entry
+- Stepper stubs replace linear actuator (STEPPER_STEP_PIN=0 guard so it no-ops safely until pins confirmed)
+- No collision sensor anywhere in code
+- STBY not touched (hardwired HIGH)
+
+### State at close
+- `UnibotsMainV2.ino` written and ready to flash
+- **Before flashing:** do the TT4 GPIO1/3 → GPIO18/19 re-wire
+- **After flashing:** confirm N20 encoder with `m` command (still use HardwareTest for bench checks), calibrate MS_PER_MM, fill in stepper pins once driver confirmed
+
+---
+
+## Session 6 — 2026-06-17 (Component list confirmed)
+
+### What happened
+- Confirmed final component list for the robot
+- **Collision sensor DROPPED** — will not be used
+- **Linear actuator REPLACED by stepper motor** for ball deposit mechanism
+- No code changes this session
+
+### Confirmed component list
+| Component | Details |
+|-----------|---------|
+| ESP32-D0WD-V3 (WROOM-32) | Brain, COM7 |
+| Android phone | YOLO11 vision, USB serial |
+| 4× TT DC motors | Drive, see pin map |
+| 3× TB6612FNG | Motor drivers, STBY hardwired HIGH |
+| N20 motor w/ encoder | Spinner wheel, encoder unconfirmed |
+| MPU6050 | Gyro/IMU, SDA=21 SCL=22 |
+| Stepper motor | Ball deposit (replaces linear actuator) |
+
+### State at close
+- Component list finalised
+- Next step: port confirmed pin map into UnibotsMain.ino and restructure for 4 independent TT motors + stepper
+
+---
+
+## Session 5 — 2026-06-17 (Catch-up / log update session)
+
+### What happened
+- Reopened project after a context-limit cut-off in Session 4
+- User pasted the lost Session 4 conversation as `C:\unibotsmark2\text file for pincode testing 166.txt`
+- Updated `CONVERSATION_LOG.md` with full Session 4 details (hardware bring-up, pin map, motor direction fixes)
+- User confirmed: **all 4 TT wheels drive forward together correctly** and **N20 confirmed spinning** — this wasn't recorded before
+- Updated memory and conversation log with that final confirmation
+- No code changes this session
+
+### State at close
+- All 5 motors working, direction correct, straight-line drive confirmed
+- `HardwareTest.ino` is the current flashed firmware on COM7
+- **Next step:** port confirmed pin/invert map into `UnibotsMain.ino` (the real match firmware)
+
+---
+
+## Session 4 — 2026-06-16 (Hardware bring-up — all motors confirmed working)
+
+### What happened
+- Created `arduino/HardwareTest/HardwareTest.ino` — interactive Serial Monitor test script (1/2/3/4/5/a/m/p/o/s commands)
+- Created `arduino/HardwareTest/platformio.ini` — board=esp32dev, port=COM7, speed=921600
+- Chip confirmed as **ESP32-D0WD-V3** (classic dual-core WROOM-32), NOT S3 — update any code/docs that said S3
+- Flashed and verified via `pio run -t upload --upload-port COM7` from `C:\unibotsmark2\arduino\HardwareTest\`
+- Found and fixed direction issues on TT2 (front-left) and TT4 (back-left) — both needed `invert=true`
+- TT3 was temporarily inverted then reverted (don't assume same-axle motors share a direction fault)
+- Front wheels (TT1/TT2) initially appeared dead — turned out to be a hardware power/wiring issue, not pin codes
+- All 5 motors now confirmed spinning correctly
+
+### Confirmed pin map (from pin codes details/ photos — improvised wiring)
+
+| Motor | PWM | IN1 | IN2 | Inverted? | Notes |
+|-------|-----|-----|-----|-----------|-------|
+| TT1 front-right | GPIO14 | GPIO13 | GPIO23 | no | |
+| TT2 front-left | GPIO16 | GPIO17 | GPIO5 | **yes** | |
+| TT3 back-right | GPIO4 | GPIO15 | GPIO2 | no | |
+| TT4 back-left | GPIO12 | GPIO1 (TX) | GPIO3 (RX) | **yes** | Shares USB Serial pins — Serial drops during TT4 test, recovers after |
+| N20 | GPIO25 | GPIO27 | GPIO26 | no | |
+
+### N20 encoder (unconfirmed)
+- Best guess from diagram: C1=GPIO32, C2=GPIO33
+- Use `m` command (spin shaft by hand, 8s monitor) to confirm — if zero pulses, edit `N20_ENC_C1/C2` defines and reflash
+- Encoder interrupt wired on RISING edge of C1, checks C2 for direction
+
+### Other key hardware notes
+- STBY on all 3 TB6612 chips is hardwired to 3.3V (always enabled) — do NOT treat as a GPIO
+- All 3 TB6612 chips need separate motor-supply voltage (VM) AND logic VCC
+- TT4's TX/RX conflict: script handles it by only claiming those pins during the '4' and 'a' tests, then restores Serial.begin() afterward
+
+### HardwareTest.ino commands
+| Key | Action |
+|-----|--------|
+| 1-5 | Test that motor (forward 600ms → stop → reverse 600ms → stop) |
+| a | All 4 TT motors forward together 1.2s |
+| m | Monitor N20 encoder for 8s while hand-spinning shaft |
+| p | Probe TT1/TT2 input pins one at a time (hold HIGH 3s — use multimeter) |
+| o | Drive TT1 then TT2 forward 6s each (multimeter the A01/A02, B01/B02 output terminals) |
+| s | Stop everything |
+
+### State at close
+- All 5 motors working, direction correct
+- **All 4 TT wheels drive forward together correctly** (confirmed via `a` command — robot would roll straight)
+- **N20 confirmed spinning** under motor power
+- Next step: port confirmed pin/invert map into `UnibotsMain.ino` (currently only handles 2 drive motors, not 4 independent ones)
 
 ---
 
@@ -85,8 +202,8 @@ The robot:
 - Full Mode 1 → Mode 2 → Mode 1 cycle — **WORKING** (but actuator/spinner pins are placeholders)
 
 ### What is NOT done yet
-- **Pin numbers are all 0 (placeholders)** — must fill in `UnibotsMain.ino` before a full hardware test
-- Spinner motor not wired/tested
+- **UnibotsMain.ino still has placeholder pins** — needs updating with the confirmed map from Session 4
+- Spinner motor (N20) encoder pins unconfirmed (GPIO32/33 best guess — use `m` command to verify)
 - Linear actuator not wired/tested
 - Collision sensor not wired/tested
 
@@ -103,7 +220,10 @@ The robot:
 | Linear actuator (deposit) | Code ready, pins are placeholders |
 | Spinner motor | Code ready, pins are placeholders |
 | Collision sensor | Code ready, pin is placeholder |
-| Full end-to-end with all hardware | NOT YET — needs pin numbers |
+| 4 TT drive motors confirmed working | Done — Session 4 |
+| N20 motor confirmed working | Done — encoder unconfirmed |
+| UnibotsMain.ino updated with real pins | NOT YET — next task |
+| Full end-to-end with all hardware | NOT YET |
 
 ---
 
@@ -154,7 +274,7 @@ This is critical for accurate return-to-start navigation.
 
 ## Critical reminders for next session
 
-1. **All pins are placeholders (set to 0).** The robot will boot and the mode cycle will run, but nothing will move. Fill in real pin numbers before any hardware test.
+1. **UnibotsMain.ino still has placeholder pins.** Real pin map is now known (confirmed in Session 4 — see Session 4 table above). Update `UnibotsMain.ino` before a full match-firmware test. `HardwareTest.ino` already has the correct confirmed map.
 
 2. **Calibrate MS_PER_MM first.** The return-to-start distance is entirely based on this. Wrong value = robot drives past home or stops short.
 

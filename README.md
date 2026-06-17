@@ -1,206 +1,122 @@
-# Unibots Mark II
+# UnibotsMarkII
 
-Autonomous robot for the Unibots UK 2025-2026 competition.
+Autonomous competition robot for Unibots UK 2025-2026.
 
-**Current brain:** Elegoo V4 (ESP32-based) running Arduino framework
-**Future plan:** Migrate brain to Android phone + ESP32 (same approach as Mark 4 Ping Pong project)
-
----
-
-## If you are completely new to this project, read this first
-
-**What is this robot?**
-An autonomous robot that collects ping-pong balls and deposits them into a scoring net. It runs for 60 seconds collecting balls (Mode 1), then navigates back to the start position and deposits (Mode 2), then repeats.
-
-**How does it know where it is?**
-It uses **dead-reckoning odometry** — it tracks every move it makes (how far forward, how many degrees it turned) and uses that to calculate where it is relative to where it started. It also uses a **gyroscope (MPU6050)** to hold a straight heading while driving. There's no GPS, no encoders — just time-based estimates.
-
-**Two modes:**
-- **Mode 1 (60 seconds):** Scan for ball → align toward it → drive forward (spinner on) → coast → repeat
-- **Mode 2:** Compute bearing and distance back to start → turn to face home → drive home → deposit → backup → restart Mode 1
-
-**Where each thing is in this repo:**
-
-| Folder | What it contains |
-|--------|-----------------|
-| `arduino/UnibotsMain/` | Main robot code (flash this to the Elegoo V4) |
-| `arduino/MotorControl/` | Motor control test sketch |
-| `arduino/MotorTest/` | Individual motor test |
-| `esp32/ReturnTest/` | ESP32 return-path test sketch |
-| `esp32/PinScanner/` | Pin scanning utility |
-| `simulation/` | Python simulation for testing navigation without hardware |
-| `rulebook arena dimensions/` | Competition arena specs |
+The robot collects orange ping-pong balls scattered on a 2×2m arena, then autonomously returns to its starting net and deposits them. It uses a YOLO11 Android app for ball detection and dead-reckoning odometry (gyro + timed drive) for the return path.
 
 ---
 
-## Current Progress (as of 2026-06-15)
+## How it works
 
-| Feature | Status |
-|---------|--------|
-| Mode 1: ball scan-step rotation | Working |
-| Mode 1: align toward ball | Working |
-| Mode 1: drive forward + spinner | Working |
-| Mode 1: coast after ball lost | Working |
-| Gyro heading-hold while driving | Working |
-| Mode 2: odometry dead-reckoning | Working |
-| Mode 2: gyro return-to-start | **Working on real hardware** |
-| Mode 2: deposit (linear actuator) | Placeholder — pins not set yet |
-| Spinner motor | Placeholder — pins not set yet |
-| All motor pins | **Placeholders (all set to 0) — fill in before flashing** |
+**Mode 1 — Ball collection (60 s)**
+Robot scans by rotating in bursts, locks onto a ball detected by the Android camera, drives toward it with the spinner wheel collecting, then resumes scanning. Repeats until 60 s is up.
 
-**The biggest thing blocking a full test run: pin numbers are all placeholders (set to 0) in `UnibotsMain.ino`. Fill these in with your actual wiring before flashing.**
+**Mode 2 — Return and deposit**
+Uses dead-reckoning odometry (accumulated x/y position from gyro heading + timed drive distance) to compute a bearing and distance back to the start, drives home, then triggers the stepper motor to deposit the balls. Resets and restarts Mode 1.
 
 ---
 
-## Setup — How to get this running on a new machine
+## Hardware
 
-### Step 1 — Clone this repo
-```bash
-git clone https://github.com/cklaw25/unibots-mark2-uncomplete.git
-```
+| Component | Details |
+|-----------|---------|
+| ESP32-D0WD-V3 (WROOM-32) | Brain — NOT an S3, classic dual-core |
+| Android phone | YOLO11 ball detection, sends packets to ESP32 via USB OTG |
+| 4× TT DC gear motors | Drive wheels (front-right, front-left, back-right, back-left) |
+| 3× TB6612FNG | Motor drivers — STBY hardwired to 3.3V, always enabled, not a GPIO |
+| N20 DC motor w/ encoder | Spinner wheel for ball collection |
+| MPU6050 | Gyroscope/IMU — I2C on SDA=21, SCL=22 |
+| Stepper motor | Ball deposit mechanism |
 
-### Step 2 — Flash the main sketch (Arduino)
-- Install Arduino IDE or PlatformIO
-- Add ESP32 board support (if using Arduino IDE: Boards Manager → search "esp32" → install Espressif)
-- Open `arduino/UnibotsMain/UnibotsMain.ino`
-- **Before flashing: fill in all the PIN definitions at the top of the file** (they are all set to 0 as placeholders)
-- Select your board (Elegoo V4 = ESP32-based board)
-- Upload
+## Pin map (confirmed 2026-06-16)
 
-### Step 3 — Run the Python simulation (optional but useful)
-```bash
-pip install matplotlib numpy
-cd simulation
-python robot_sim.py
-```
-This lets you test the return-to-start navigation on screen before running on real hardware.
+| Motor | PWM | IN1 | IN2 | Inverted |
+|-------|-----|-----|-----|----------|
+| TT1 front-right | GPIO14 | GPIO13 | GPIO23 | no |
+| TT2 front-left | GPIO16 | GPIO17 | GPIO5 | yes |
+| TT3 back-right | GPIO4 | GPIO15 | GPIO2 | no |
+| TT4 back-left | GPIO12 | GPIO18 | GPIO19 | yes |
+| N20 spinner | GPIO25 | GPIO27 | GPIO26 | no |
+| MPU6050 SDA | — | GPIO21 | — | — |
+| MPU6050 SCL | — | GPIO22 | — | — |
+
+N20 encoder: C1=GPIO32, C2=GPIO33 (best guess from wiring diagram — unconfirmed).
+
+Stepper motor pins: TBD — fill into `arduino/UnibotsMainV2/UnibotsMainV2.ino` before use.
 
 ---
 
-## Hardware Overview
+## Code
 
-**Brain:** Elegoo V4 (ESP32 chip, Arduino framework)
+| Path | Purpose |
+|------|---------|
+| `arduino/UnibotsMainV2/UnibotsMainV2.ino` | **Main match firmware — flash this to ESP32** |
+| `arduino/UnibotsMainV2/platformio.ini` | PlatformIO config (board=esp32dev, COM7) |
+| `arduino/HardwareTest/HardwareTest.ino` | Motor bench-test tool (serial menu, not for match use) |
+| `android/` | Android YOLO11 ball-detection app — build and install on phone |
+| `simulation/` | Python dead-reckoning simulator (no hardware needed) |
 
-**Sensors:**
-- MPU6050 gyro (I2C) — heading hold + drift correction
-- Android phone (USB serial, 115200 baud) — sends ball detection packets
+---
 
-**Actuators:**
-- Drive motors × 2 (differential drive, tank-style steering)
-- Spinner motor — collects balls on contact
-- Linear actuator — raises to deposit balls into net
+## REMINDERS — read before flashing
 
-**Pin mapping — ALL PLACEHOLDERS, fill in from your wiring:**
+These are open hardware/config items. Check each one before proceeding.
+
+**1. TT4 wiring — MUST CHECK**
+TT4's direction pins were originally on GPIO1 (TX) and GPIO3 (RX), which conflict with USB serial (Android packets). They must be re-routed:
+- TT4 IN1: move wire from GPIO1 → GPIO18
+- TT4 IN2: move wire from GPIO3 → GPIO19
+
+The firmware already expects GPIO18/19. If this re-wire has not been done, the robot will lose Android ball packets every time TT4 drives.
+
+**2. Stepper motor pins — MUST FILL IN**
+Open `arduino/UnibotsMainV2/UnibotsMainV2.ino` and fill in:
 ```cpp
-PIN_PWMA         // Right motor speed (PWM)
-PIN_PWMB         // Left motor speed (PWM)
-PIN_AIN          // Right motor direction
-PIN_BIN          // Left motor direction
-PIN_STBY         // Motor enable
-PIN_SPINNER_1    // Spinner IN1
-PIN_SPINNER_2    // Spinner IN2
-PIN_ACTUATOR_UP  // Linear actuator extend
-PIN_ACTUATOR_DOWN // Linear actuator retract
-PIN_COLLISION    // Collision sensor
-PIN_SDA = 21     // MPU6050 I2C data
-PIN_SCL = 22     // MPU6050 I2C clock
+#define STEPPER_STEP_PIN     0   // ← real GPIO
+#define STEPPER_DIR_PIN      0   // ← real GPIO
+#define STEPPER_EN_PIN       0   // ← real GPIO (or leave 0 if no enable pin)
+#define STEPPER_STEPS_EXTEND 200 // ← steps to fully extend mechanism
+```
+Driver assumed: A4988 or DRV8825 (STEP + DIR + EN-active-LOW).
+If using a different driver type, the `stepperStep()` function will need updating.
+
+**3. MS_PER_MM calibration — do after first flash**
+The return-path distance is entirely based on this constant. Wrong value = robot overshoots or stops short.
+```cpp
+#define MS_PER_MM  3.5f   // ← replace with: drive robot 500mm, measure ms, set = ms/500
 ```
 
-**Power:** TBD
+**4. N20 encoder pins — unconfirmed**
+GPIO32/33 are a best guess from the hand-drawn wiring diagram. Use `HardwareTest.ino` and the `m` command (spin shaft by hand, watch pulse count) to verify. If zero pulses, the pins are wrong — only `N20_ENC_C1` and `N20_ENC_C2` in the firmware need changing.
 
 ---
 
-## How the Code Works
+## Instructions for Claude
 
-### Mode 1 — Ball Collection FSM
+You are being given this README to help bring up this robot. Here is the workflow:
 
+**Step 1 — Check the reminders above.**
+Go through reminders 1-4 with the user. Ask which ones have been done and which are still outstanding. Do not proceed to flashing until reminder 1 (TT4 re-wire) and reminder 2 (stepper pins) are either fixed or the user explicitly says to ignore them.
+
+**Step 2 — Flash the ESP32.**
+Once reminders are addressed:
 ```
-S1_SCAN_STEP  → rotate CW for 400ms (~45 degrees)
-S1_SCAN_PAUSE → stop 1.5s, wait for ball packet from Android
-                ball visible → S1_ALIGN
-                timeout → S1_SCAN_STEP (next step)
-S1_ALIGN      → pulse-rotate 200ms toward ball
-                ball centred → spinner ON → S1_APPROACH
-S1_APPROACH   → drive forward (gyro heading-hold)
-                ball lost for 5 consecutive frames → S1_COAST
-S1_COAST      → drive forward 2s, spinner ON
-                → record distance in odometry → S1_SCAN_STEP
+cd C:\unibotsmark2\arduino\UnibotsMainV2
+pio run -t upload --upload-port COM7
 ```
+Close any Serial Monitor or `pio device monitor` before running — COM7 busy will cause upload failure.
 
-Mode 1 runs for 60 seconds, then auto-switches to Mode 2.
-
-### Mode 2 — Return to Start
-
+**Step 3 — Build and install the Android app.**
 ```
-S2_COMPUTE     → calculate bearing + distance to start using odometry
-S2_NAVIGATE    → turn to face home (gyro-controlled), drive home (time-based)
-                 fine approach: 4 short pulses to reach wall
-S2_AT_POSITION → arrived
-S2_DEPOSIT     → linear actuator UP for 1s
-S2_RETRACT     → linear actuator DOWN for 0.6s
-S2_BACKUP      → reverse 0.7s
-                 → reset odometry → restart Mode 1
+cd C:\unibotsmark2\android
+.\gradlew assembleDebug
+adb install app\build\outputs\apk\debug\app-debug.apk
 ```
+Phone must be connected via USB with USB debugging enabled. If `adb` is not found, it is in the Android SDK platform-tools folder — ask the user for the path or add it to PATH.
 
-### Odometry (dead-reckoning)
-Robot tracks its position as `(x, y)` in mm from start. Every time it drives forward, it adds `(duration_ms / MS_PER_MM)` to its position based on the current gyro heading. When it returns home, it computes `atan2(-y, -x)` for the bearing and `sqrt(x²+y²)` for the distance.
-
-**Key constant to calibrate:**
-`MS_PER_MM = 3.5` — run robot forward 500mm, time it, divide: `ms / 500 = MS_PER_MM`
-
-### Rotation Direction Note
-`err_x > 0` (ball on RIGHT of screen) → rotate **CCW**
-`err_x < 0` (ball on LEFT) → rotate **CW**
-This is physically correct. Do not change it.
-
----
-
-## Tunable Constants (in UnibotsMain.ino)
-
-| Constant | Value | What it controls |
-|----------|-------|-----------------|
-| `MS_PER_MM` | 3.5 | Distance calibration — **calibrate first** |
-| `SPEED` | 150 | Forward drive speed (0-255) |
-| `TURN_SPEED` | 120 | Rotation speed |
-| `KP` | 1.8 | Heading-hold P-gain (reduce if oscillating) |
-| `TURN_THRESH` | 3.0° | Stop turning within this many degrees |
-| `MODE1_DURATION_MS` | 60000 | How long Mode 1 runs (ms) |
-| `SCAN_STEP_MS` | 400 | Rotation step duration (~45°) |
-| `SCAN_PAUSE_MS` | 1500 | Pause to look for ball |
-| `ALIGN_STEP_MS` | 200 | Alignment pulse duration |
-| `COAST_MS` | 2000 | Coast time after ball lost |
-| `CENTRE_ERR_PX` | 100 | Pixel threshold for "ball is centred" |
-| `BALL_LOST_FRAMES` | 5 | Frames without ball before COAST |
-
----
-
-## Python Simulation
-
-The `simulation/` folder lets you test the navigation before running on hardware:
-
-- `odometry.py` — dead-reckoning tracker (integrates commands into x/y/angle)
-- `return_nav.py` — return-to-start navigator (bearing → drive → fine approach → wall-seek)
-- `localizer.py` — AprilTag-based position correction (opportunistic tag fixes mid-return)
-- `robot_sim.py` — 2D visualiser
-- `env_map.py` — arena dimensions and tag positions
-
-To use it:
-```bash
-pip install matplotlib numpy
-cd simulation
-python robot_sim.py
-```
-
-Edit `TAG_POSITIONS` in `env_map.py` to match your actual field measurements.
-
----
-
-## Future Plan — Migration to Android + ESP32
-
-The current brain is the Elegoo V4 running Arduino code. The plan is to eventually migrate to:
-- **Android phone** as the vision/brain (YOLO11 ball detection, AprilTag navigation)
-- **ESP32** as the motor controller
-
-The serial packet format (ball detection CSV from Android) is already compatible between the two projects.
-
-**Mode 2 keeps odometry as the primary return-path method.** The odometry dead-reckoning is the core upgrade over Mark 4 Ping Pong and is a permanent design decision — it will not be replaced by AprilTag visual navigation. The simulation folder directly models this and stays fully relevant.
+**Step 4 — Run.**
+- Open the installed app on the phone (`yolo11ncnn`)
+- Connect phone to ESP32 via USB OTG cable
+- Power the ESP32
+- Keep robot still for ~1 s while gyro calibrates (Serial Monitor will show "Gyro ready.")
+- Robot starts automatically after a 2 s delay

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- CP2102 (most common ESP32 board chip) VID=0x10C4 PID=0xEA60 -->
+    <usb-device vendor-id="4292" product-id="60000" />
+    <!-- CH340 VID=0x1A86 PID=0x7523 -->
+    <usb-device vendor-id="6790" product-id="29987" />
+    <!-- CH341 VID=0x1A86 PID=0x5523 -->
+    <usb-device vendor-id="6790" product-id="21795" />
+    <!-- FTDI FT232 VID=0x0403 PID=0x6001 -->
+    <usb-device vendor-id="1027" product-id="24577" />
+</resources>
