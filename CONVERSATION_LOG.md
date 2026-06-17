@@ -1,9 +1,33 @@
 # Session Conversation Log & Project Handoff
-Last saved: 2026-06-17 (updated — UnibotsMainV2 generated)
+Last saved: 2026-06-17 (updated — README usage guide + GitHub push)
 
 This file is a human-readable summary of the full development session so far.
 It is intended to allow someone picking this up on a new machine to understand
 exactly where we left off, what decisions were made and why, and what to do next.
+
+---
+
+## Session 8 — 2026-06-17 (GitHub update + README usage guide)
+
+### What happened
+- Added "How to use the code" section to README covering UnibotsMainV2 and HardwareTest
+  - UnibotsMainV2: boot sequence, Serial Monitor output format, tuning constants table
+  - HardwareTest: command reference (1-5, a, m, p, o, s), recommended bring-up order
+- Pushed everything to GitHub (`cklaw25/unibots-mark2-uncomplete`):
+  - `arduino/UnibotsMainV2/` — new combined match firmware
+  - `arduino/HardwareTest/` — bench test tool
+  - `android/` — full YOLO11 Android app with model weights
+  - `README.md` — rewritten for new user/Claude sessions
+  - `CONVERSATION_LOG.md` — updated
+- No code changes this session
+
+### State at close
+- GitHub fully up to date
+- Robot is ready to be physically brought up — outstanding items before match:
+  1. TT4 re-wire: GPIO1/3 → GPIO18/19
+  2. Stepper motor pins confirmed and filled into UnibotsMainV2.ino
+  3. MS_PER_MM calibrated after first flash
+  4. N20 encoder pins verified with HardwareTest `m` command
 
 ---
 
