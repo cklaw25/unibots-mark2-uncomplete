@@ -58,6 +58,97 @@ Stepper motor pins: TBD — fill into `arduino/UnibotsMainV2/UnibotsMainV2.ino` 
 
 ---
 
+## How to use the code
+
+### UnibotsMainV2 — match firmware
+
+This is fully autonomous once flashed. There are no commands to send — the robot runs itself.
+
+**What happens at power-on:**
+1. Serial Monitor prints `UnibotsMarkII v2 booting...`
+2. Gyro calibrates for ~1 s — keep the robot completely still during this
+3. `Gyro ready.` is printed — you have 2 s to place the robot on the floor
+4. Robot nudges forward 0.7 s (startup move), then Mode 1 begins automatically
+
+**Reading the Serial Monitor output (115200 baud):**
+
+During Mode 1 you will see state transitions as the robot runs:
+```
+=== MODE 1 START ===
+[M1] SCAN_STEP
+[M1] SCAN_PAUSE
+[M1] ALIGN
+[M1] APPROACH
+[M1] COAST
+[M1] SCAN_STEP
+...
+=== MODE 1 END — switching to MODE 2 ===
+```
+
+During Mode 2:
+```
+=== MODE 2 START ===
+[M2] COMPUTE
+  pos: (312.4, -88.1) mm
+  dist: 324.6 mm
+  bearing: 15.7 deg
+[M2] NAVIGATE
+[M2] AT_POSITION
+  Arrived at home position.
+[M2] DEPOSIT
+[M2] RETRACT
+[M2] BACKUP
+=== MODE 2 END — restarting MODE 1 ===
+```
+
+**Tuning constants in the file (top of `UnibotsMainV2.ino`):**
+
+| Constant | What it controls | When to change |
+|----------|-----------------|----------------|
+| `MS_PER_MM` | Drive distance calibration | After first flash — measure 500mm run |
+| `DRIVE_SPEED` | Forward PWM (0-255) | If robot is too fast/slow |
+| `TURN_SPEED` | Rotation PWM | If turns are too aggressive |
+| `KP` | Heading-hold strength | If robot drifts or oscillates while driving |
+| `GYRO_SIGN` | Gyro direction | Flip to -1 if heading corrections go the wrong way |
+| `COAST_MS` | How long to drive after ball leaves frame | If balls are being missed |
+| `BALL_LOST_FRAMES` | Frames without ball before APPROACH → COAST | If robot aborts approach too early/late |
+| `STEPPER_STEPS_EXTEND` | How far stepper extends for deposit | Tune to your mechanism travel distance |
+
+---
+
+### HardwareTest — bench test tool
+
+Flash this **instead of** UnibotsMainV2 when you want to test individual motors on the bench. Do not use it during a match.
+
+Flash it from `arduino/HardwareTest/`:
+```
+cd C:\unibotsmark2\arduino\HardwareTest
+pio run -t upload --upload-port COM7
+```
+
+Open Serial Monitor at **115200 baud**. You will see a menu. Send a single character (no newline needed):
+
+| Key | What it does |
+|-----|-------------|
+| `1` | TT1 front-right — forward 600ms, stop, reverse 600ms, stop |
+| `2` | TT2 front-left — same sequence |
+| `3` | TT3 back-right — same sequence |
+| `4` | TT4 back-left — same sequence (**Serial goes quiet** during this test — normal, TX/RX pins conflict) |
+| `5` | N20 spinner — same sequence, also prints encoder pulse delta |
+| `a` | All 4 TT wheels forward together 1.2 s — use this to confirm straight-line drive |
+| `m` | Encoder monitor — spin N20 shaft by hand for 8 s, watch pulse count to confirm GPIO32/33 are correct |
+| `p` | Pin probe — holds each TT1/TT2 input pin HIGH 3 s so you can confirm continuity with a multimeter |
+| `o` | Output terminal test — drives TT1 then TT2 for 6 s each so you can measure voltage at screw terminals |
+| `s` | Stop everything immediately |
+
+**Recommended test order when bringing up the hardware for the first time:**
+1. `1` through `4` individually — confirm each wheel spins the right direction (forward = away from starting wall)
+2. `a` — confirm all 4 go forward together and robot rolls straight
+3. `5` — confirm N20 spinner runs
+4. `m` — confirm N20 encoder pulses (if zero, GPIO32/33 are wrong — update `N20_ENC_C1/C2` defines)
+
+---
+
 ## REMINDERS — read before flashing
 
 These are open hardware/config items. Check each one before proceeding.
