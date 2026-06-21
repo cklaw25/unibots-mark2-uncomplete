@@ -1,9 +1,77 @@
 # Session Conversation Log & Project Handoff
-Last saved: 2026-06-17 (updated — README usage guide + GitHub push)
+Last saved: 2026-06-21 (Session 9 — two-board rewrite, BoardA + BoardB + Android)
 
 This file is a human-readable summary of the full development session so far.
 It is intended to allow someone picking this up on a new machine to understand
 exactly where we left off, what decisions were made and why, and what to do next.
+
+---
+
+## Session 9 — 2026-06-21 (Two-board rewrite — BoardA + BoardB + Android)
+
+### What changed
+- New schematic reviewed: `pin codes details/extra stuff since 216/schematic_two_board.md`
+- **TT4 GPIO1/3 conflict is FIXED** — new pin map avoids GPIO1/3 entirely
+- **Stepper motor dropped** — replaced by N20 #2 (lift motor on Board B)
+- **Architecture: two ESP32 boards confirmed**
+  - Board A = wheels + MPU6050 + phone USB serial
+  - Board B = N20 spinner + N20 lift + encoders
+- **GPIO4 wire protocol** (Board A output, Board B input):
+  - LOW sustained = Mode 1 → Board B spins spinner
+  - LOW→HIGH = Mode 2 start → Board B rotates 90° gate, holds (balls can't slip)
+  - HIGH→LOW 200ms→HIGH = deposit pulse → Board B lifts, holds, lowers
+  - HIGH→LOW sustained = Mode 1 resuming → Board B opens gate, resumes spinner
+- **Bug fixed**: original UnibotsMainV2 never set `currentMode = MODE_2`, causing
+  `driveForwardHold()` to exit early during Mode 2 navigation. Fixed in BoardA.ino.
+
+### New files written
+| File | Purpose |
+|------|---------|
+| `arduino/BoardA/BoardA.ino` | Complete Board A firmware (new pins, GPIO4, no spinner) |
+| `arduino/BoardA/platformio.ini` | PlatformIO config for COM7 |
+| `arduino/BoardB/BoardB.ino` | Complete Board B firmware (spinner + lift + encoder) |
+| `arduino/BoardB/platformio.ini` | PlatformIO config — ⚠️ update COMX to Board B's port |
+| `android/.../MainActivity.java` | Removed auto-switch, auto-connect USB, auto-select Task 5 |
+
+### Complete new pin maps
+
+**Board A (wheels ESP32, COM7):**
+| Motor | PWM | IN1 | IN2 | Invert |
+|-------|-----|-----|-----|--------|
+| TT1 front-right | GPIO13 | GPIO14 | GPIO16 | false |
+| TT2 front-left  | GPIO17 | GPIO18 | GPIO19 | true (guess) |
+| TT3 back-right  | GPIO23 | GPIO25 | GPIO26 | false |
+| TT4 back-left   | GPIO27 | GPIO32 | GPIO33 | true (guess) |
+| MPU6050 SDA | GPIO21 | | | |
+| MPU6050 SCL | GPIO22 | | | |
+| Trigger OUT | GPIO4 | | | |
+
+**Board B (N20 ESP32, COMX):**
+| Component | PWM | IN1 | IN2 | ENC C1 | ENC C2 |
+|-----------|-----|-----|-----|--------|--------|
+| N20 #1 spinner | GPIO13 | GPIO14 | GPIO27 | GPIO32 | GPIO33 |
+| N20 #2 lift    | GPIO16 | GPIO17 | GPIO18 | (unused) | (unused) |
+| Trigger IN | GPIO4 | | | | |
+
+### What teammates need to do after flashing
+1. **Board A: invert flags** — if any wheel drives backward, flip its `invert` in BoardA.ino
+2. **Board A: MS_PER_MM** — drive 500mm, time it in ms, set `MS_PER_MM = ms/500`
+3. **Board B: SPINNER_PULSES_REV** — send `m` in Serial Monitor, spin N20 shaft 1 revolution by hand, read delta count, set constant
+4. **Board B: LIFT_UP_MS / LIFT_DOWN_MS** — send `l` in Serial Monitor, watch lift extend/retract, tune timing
+5. **Board B: platformio.ini** — replace `COMX` with actual COM port of Board B ESP32
+
+### Additional updates (same session)
+- `BoardA.ino` — added 5-second boot window to enter motor test mode
+  - `1`-`4` = test individual wheel, `a` = all forward, `d` = 5s drive for MS_PER_MM calibration, `q` = quit to match
+- `android/main.xml` — added live status TextView (`textStatusUsb`)
+- `android/MainActivity.java` — status label polls every 2s: "ESP32: Connected" (green) / "ESP32: Not connected" (red)
+- `README.md` — complete rewrite: from-scratch setup guide (Step 1-7), per-component test procedures, tuning constants table, full troubleshooting table
+
+### State at close
+- All code complete and ready to flash
+- README has full teammate-facing guide from fresh computer → running match
+- Two calibration steps still need to be done on-site (MS_PER_MM and SPINNER_PULSES_REV)
+- Not yet pushed to GitHub
 
 ---
 
