@@ -68,14 +68,19 @@ exactly where we left off, what decisions were made and why, and what to do next
 - `README.md` — complete rewrite: from-scratch setup guide (Step 1-7), per-component test procedures, tuning constants table, full troubleshooting table (15 entries)
 
 ### State at close
-- **All code pushed to GitHub** — commit `c59d25e` on master
+- **All code pushed to GitHub** — commit `83f9ade` on master
 - README has full teammate-facing guide: fresh computer → running match (Steps 1-7)
-- Calibration still needed on-site (teammates do these after flashing):
-  1. Invert flags — test each wheel with `1`-`4`, fix any backward wheels
-  2. MS_PER_MM — use `d` command, measure 5s drive distance, set = 5000/mm
-  3. SPINNER_PULSES_REV — use `m` command on Board B, spin shaft 1 rev by hand
-  4. LIFT_UP_MS / LIFT_DOWN_MS — use `l` command on Board B, tune until full travel
-  5. Board B COM port — update `COMX` in `arduino/BoardB/platformio.ini`
+- **Everything is code-complete. The ONLY thing left is collecting 4 data points from teammates on-site:**
+
+  | # | Board | Command | What to ask teammates | What to do with the answer |
+  |---|-------|---------|----------------------|---------------------------|
+  | 1 | A | `t` → `1`-`4` | Which wheels went backward first? | Flip `invert` flag for those wheels, reflash |
+  | 2 | A | `t` → `d` | How many mm did the robot travel? | Set `MS_PER_MM = 5000 / mm`, reflash |
+  | 3 | B | `m` | What is the delta count after 1 full spinner revolution? | Set `SPINNER_PULSES_REV = that number`, reflash |
+  | 4 | B | `l` | Did lift fully extend AND fully retract? | If no, adjust `LIFT_UP_MS`/`LIFT_DOWN_MS`, reflash |
+
+  Note: `d` calibrates **drive speed** (MS_PER_MM), NOT the gyroscope. Gyro calibrates itself at boot automatically.
+  Note: Board B `platformio.ini` — teammate must tell you the COM port to replace `COMX` before flashing Board B.
 
 ---
 
