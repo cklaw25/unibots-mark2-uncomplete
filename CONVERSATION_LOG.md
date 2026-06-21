@@ -1,5 +1,5 @@
 # Session Conversation Log & Project Handoff
-Last saved: 2026-06-21 (Session 9 — two-board rewrite, BoardA + BoardB + Android)
+Last saved: 2026-06-21 (Session 9 — complete, pushed to GitHub)
 
 This file is a human-readable summary of the full development session so far.
 It is intended to allow someone picking this up on a new machine to understand
@@ -65,13 +65,17 @@ exactly where we left off, what decisions were made and why, and what to do next
   - `1`-`4` = test individual wheel, `a` = all forward, `d` = 5s drive for MS_PER_MM calibration, `q` = quit to match
 - `android/main.xml` — added live status TextView (`textStatusUsb`)
 - `android/MainActivity.java` — status label polls every 2s: "ESP32: Connected" (green) / "ESP32: Not connected" (red)
-- `README.md` — complete rewrite: from-scratch setup guide (Step 1-7), per-component test procedures, tuning constants table, full troubleshooting table
+- `README.md` — complete rewrite: from-scratch setup guide (Step 1-7), per-component test procedures, tuning constants table, full troubleshooting table (15 entries)
 
 ### State at close
-- All code complete and ready to flash
-- README has full teammate-facing guide from fresh computer → running match
-- Two calibration steps still need to be done on-site (MS_PER_MM and SPINNER_PULSES_REV)
-- Not yet pushed to GitHub
+- **All code pushed to GitHub** — commit `c59d25e` on master
+- README has full teammate-facing guide: fresh computer → running match (Steps 1-7)
+- Calibration still needed on-site (teammates do these after flashing):
+  1. Invert flags — test each wheel with `1`-`4`, fix any backward wheels
+  2. MS_PER_MM — use `d` command, measure 5s drive distance, set = 5000/mm
+  3. SPINNER_PULSES_REV — use `m` command on Board B, spin shaft 1 rev by hand
+  4. LIFT_UP_MS / LIFT_DOWN_MS — use `l` command on Board B, tune until full travel
+  5. Board B COM port — update `COMX` in `arduino/BoardB/platformio.ini`
 
 ---
 
