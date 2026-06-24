@@ -117,7 +117,7 @@ Send these single letters one at a time:
 
 **If a wheel goes the wrong way:**
 1. Open `arduino/BoardA/BoardA.ino`
-2. Find the line for that wheel (e.g. `{ "TT2 front-left", 17, 18, 19, true }`)
+2. Find the line for that wheel (e.g. `{ "TT2 front-left", 14, 26, 27, true }`)
 3. Change `true` to `false` (or `false` to `true`) at the end
 4. Save, re-upload (click → again), re-test
 
@@ -350,10 +350,10 @@ Board B booting...
 
 | Motor | PWM | IN1 | IN2 | Invert | Driver chip |
 |-------|-----|-----|-----|--------|-------------|
-| TT1 front-right | GPIO13 | GPIO14 | GPIO16 | check on bench | TB6612 #2 Ch A |
-| TT2 front-left  | GPIO17 | GPIO18 | GPIO19 | check on bench | TB6612 #2 Ch B |
-| TT3 back-right  | GPIO23 | GPIO25 | GPIO26 | check on bench | TB6612 #3 Ch A |
-| TT4 back-left   | GPIO27 | GPIO32 | GPIO33 | check on bench | TB6612 #3 Ch B |
+| TT1 front-right | GPIO32 | GPIO25 | GPIO33 | check on bench | TB6612 #2 Ch A |
+| TT2 front-left  | GPIO14 | GPIO26 | GPIO27 | check on bench | TB6612 #2 Ch B |
+| TT3 back-right  | GPIO13 | GPIO17 | GPIO16 | check on bench | TB6612 #3 Ch A |
+| TT4 back-left   | GPIO23 | GPIO18 | GPIO19 | check on bench | TB6612 #3 Ch B |
 | MPU6050 SDA | GPIO21 | | | | direct I2C |
 | MPU6050 SCL | GPIO22 | | | | direct I2C |
 | Trigger OUT to Board B | GPIO4 | | | | single wire |

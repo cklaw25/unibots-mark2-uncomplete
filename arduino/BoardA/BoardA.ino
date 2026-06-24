@@ -10,8 +10,8 @@
 //   HIGH → LOW sustained  = Mode 1 resuming → Board B rotates gate back, resumes spinner
 //
 // Pin map: schematic_two_board.md (2026-06-21)
-//   TB6612 #2 front wheels: GPIO13/14/16 (right), GPIO17/18/19 (left)
-//   TB6612 #3 back wheels:  GPIO23/25/26 (right), GPIO27/32/33 (left)
+//   TB6612 #2 front wheels: GPIO32/25/33 (right), GPIO14/26/27 (left)
+//   TB6612 #3 back wheels:  GPIO13/17/16 (right), GPIO23/18/19 (left)
 //   MPU6050: SDA=GPIO21, SCL=GPIO22
 //   Trigger out: GPIO4
 //
@@ -49,10 +49,10 @@ struct MotorPins { const char* name; uint8_t pwm; uint8_t in1; uint8_t in2; bool
 // ⚠️ Invert flags: flip to true if that wheel runs backward. Left-side motors
 // typically need invert=true depending on how the motor wires land on AO/BO outputs.
 MotorPins tt[] = {
-    { "TT1 front-right", 13, 14, 16, false },   // TB6612 #2 Ch A: PWMA=13 AIN1=14 AIN2=16
-    { "TT2 front-left",  17, 18, 19, true  },   // TB6612 #2 Ch B: PWMB=17 BIN1=18 BIN2=19
-    { "TT3 back-right",  23, 25, 26, false },   // TB6612 #3 Ch A: PWMA=23 AIN1=25 AIN2=26
-    { "TT4 back-left",   27, 32, 33, true  },   // TB6612 #3 Ch B: PWMB=27 BIN1=32 BIN2=33
+    { "TT1 front-right", 32, 25, 33, false },   // TB6612 #2 Ch A: PWMA=32 AIN1=25 AIN2=33
+    { "TT2 front-left",  14, 26, 27, true  },   // TB6612 #2 Ch B: PWMB=14 BIN1=26 BIN2=27
+    { "TT3 back-right",  13, 17, 16, false },   // TB6612 #3 Ch A: PWMA=13 AIN1=17 AIN2=16
+    { "TT4 back-left",   23, 18, 19, true  },   // TB6612 #3 Ch B: PWMB=23 BIN1=18 BIN2=19
 };
 
 #define PIN_TRIGGER  4    // GPIO4 output → Board B
