@@ -1,9 +1,42 @@
 # Session Conversation Log & Project Handoff
-Last saved: 2026-06-21 (Session 9 — complete, pushed to GitHub)
+Last saved: 2026-06-24 (Session 10 — complete, pushed to GitHub)
 
 This file is a human-readable summary of the full development session so far.
 It is intended to allow someone picking this up on a new machine to understand
 exactly where we left off, what decisions were made and why, and what to do next.
+
+---
+
+## Session 10 — 2026-06-24 (Board A pin map update from teammate schematic)
+
+### What changed
+- Teammate provided updated wiring schematic: `pin codes details/new pins 246/schematic_two_board (updated).md`
+- **All 4 TT motor pin assignments changed** on Board A (Board B unchanged)
+
+### New Board A pin map
+| Motor | PWM | IN1 | IN2 | Driver |
+|-------|-----|-----|-----|--------|
+| TT1 front-right | GPIO32 | GPIO25 | GPIO33 | TB6612 #2 Ch A |
+| TT2 front-left  | GPIO14 | GPIO26 | GPIO27 | TB6612 #2 Ch B |
+| TT3 back-right  | GPIO13 | GPIO17 | GPIO16 | TB6612 #3 Ch A |
+| TT4 back-left   | GPIO23 | GPIO18 | GPIO19 | TB6612 #3 Ch B |
+
+### Files changed
+- `arduino/BoardA/BoardA.ino` — `tt[]` array and header comment updated
+- `README.md` — Board A pin map table + Step 3c example updated
+- `pin codes details/new pins 246/` — new schematic added to repo
+
+### State at close
+- Pushed to GitHub as commit `9966a40` on master
+- **Everything is still code-complete. Board B unchanged.**
+- Still waiting on the 4 calibration data points from teammates (same as Session 9):
+
+  | # | Board | Command | What to ask teammates | What to do with the answer |
+  |---|-------|---------|----------------------|---------------------------|
+  | 1 | A | `t` → `1`-`4` | Which wheels went backward? | Flip `invert` flag for those wheels, reflash |
+  | 2 | A | `t` → `d` | How many mm did robot travel in 5s? | `MS_PER_MM = 5000 / mm`, reflash |
+  | 3 | B | `m` | Delta count after 1 full spinner revolution? | `SPINNER_PULSES_REV = that number`, reflash |
+  | 4 | B | `l` | Did lift fully extend AND retract? | If no, tune `LIFT_UP_MS`/`LIFT_DOWN_MS`, reflash |
 
 ---
 
